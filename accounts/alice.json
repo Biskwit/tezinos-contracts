@@ -1,0 +1,24 @@
+{
+  "mnemonic": [
+    "labor",
+    "bus",
+    "around",
+    "suit",
+    "peasant",
+    "morning",
+    "public",
+    "wish",
+    "praise",
+    "photo",
+    "team",
+    "elevator",
+    "believe",
+    "stock",
+    "record"
+  ],
+  "secret": "efda6cdf69194fc51d43f96c2d9e935fa8aa8f71",
+  "amount": "19476885158",
+  "pkh": "tz1fiR5jXKEyvaiGYWTx8yo4T68fekMBbBek",
+  "password": "x6e5hxZpVR",
+  "email": "jgjiuhzq.ejsipbec@tezos.example.org"
+}
