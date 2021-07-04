@@ -95,7 +95,7 @@ function bet (const self : state; const number : nat; const betType : nat) : (st
     cAssert(Tezos.amount = self.betAmount, "Tezos.amount = self.betAmount");
     cAssert(((betType >= 0n) and (betType <= 5n)), "(betType >= 0n) and (betType <= 5n)");
     cAssert((number >= 0n) and (number <= (case self.numberRange[betType] of | None -> 0n | Some(x) -> x end)), "Out of range");
-    const payoutForThisBet : tez = ((case self.numberRange[betType] of | None -> 0n | Some(x) -> x end) * Tezos.amount);
+    const payoutForThisBet : tez = ((case self.payouts[betType] of | None -> 0n | Some(x) -> x end) * Tezos.amount);
     const provisionalBalance : tez = (self.necessaryBalance + payoutForThisBet);
     cAssert((provisionalBalance < Tezos.balance), "provisionalBalance < Tezos.balance");
     self.necessaryBalance := (self.necessaryBalance + payoutForThisBet);
