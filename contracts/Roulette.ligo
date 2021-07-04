@@ -15,6 +15,7 @@ type state is record
   payouts : map(nat, nat);
   numberRange : map(nat, nat);
   bets : map(nat, roulette_Bet);
+  bannedUsers: set(address);
 end;
 
 type betParams is record
@@ -26,12 +27,17 @@ type spinWheelParams is record
   result : nat;
 end;
 
+type banParams is record
+  player : address;
+end;
+
 type entryAction is
   | Initialize of unit
   | Fund of unit
-  | CashOut of unit
   | SpinWheel of spinWheelParams
   | Bet of betParams
+  | BanUser of banParams
+  | UnBanUser of banParams
 
 const roulette_Bet_0 : roulette_Bet = record [ 
   player = ("tz1ZDcc6MGxidty2jivtWBjnuo1mcSXf4Mmr" : address);
@@ -41,6 +47,22 @@ const roulette_Bet_0 : roulette_Bet = record [
 function cAssert(const p : bool; const s: string) : unit is
   block { if p then skip else failwith(s) }
   with unit
+
+function banUser (var self : state; const user : address) : state is
+  block {
+    cAssert(Tezos.sender = self.creator, "Tezos.sender = self.creator");
+    if not (self.bannedUsers contains user)
+        then self.bannedUsers := Set.add(user, self.bannedUsers);
+    else failwith ("user already banned");
+  } with self
+
+function unbanUser (var self : state; const user : address) : state is
+  block {
+    cAssert(Tezos.sender = self.creator, "Tezos.sender = self.creator");
+    if (self.bannedUsers contains user)
+        then self.bannedUsers := Set.remove(user, self.bannedUsers);
+    else failwith ("user already unbanned");
+  } with self
 
 function init (const self : state) : (state) is block {
     cAssert(self.initialized = False, "Creator already exist");
@@ -69,6 +91,7 @@ function init (const self : state) : (state) is block {
 } with (self);
 
 function bet (const self : state; const number : nat; const betType : nat) : (state) is block {
+    cAssert(self.bannedUsers contains Tezos.sender, "banned user");
     cAssert(Tezos.amount = self.betAmount, "Tezos.amount = self.betAmount");
     cAssert(((betType >= 0n) and (betType <= 5n)), "(betType >= 0n) and (betType <= 5n)");
     cAssert((number >= 0n) and (number <= (case self.numberRange[betType] of | None -> 0n | Some(x) -> x end)), "Out of range");
@@ -227,5 +250,6 @@ function main (const action : entryAction; const self : state) : (list(operation
   | Fund -> ((nil : list(operation)), fund(self))
   | Bet(params) -> ((nil : list(operation)), bet(self, params.number, params.betType))
   | SpinWheel(params) -> spinWheel(self, params.result)
-  | CashOut -> cashOut(self)
+  | BanUser(params) -> ((nil : list(operation)), banUser(self, params.player))
+  | UnBanUser(params) -> ((nil : list(operation)), unbanUser(self, params.player))
   end

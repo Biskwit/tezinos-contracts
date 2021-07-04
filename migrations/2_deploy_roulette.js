@@ -12,7 +12,8 @@ const store = {
   winnings: new MichelsonMap(),
   payouts: new MichelsonMap(),
   numberRange: new MichelsonMap(),
-  bets: new MichelsonMap()
+  bets: new MichelsonMap(),
+  bannedUsers: [],
 }
 
 module.exports = async(deployer) => {

@@ -4,7 +4,8 @@ const store = {
   initialized: false,
   minAmount: 0,
   creator: "tz1ZDcc6MGxidty2jivtWBjnuo1mcSXf4Mmr",
-  players: []
+  players: [],
+  bannedUsers: [],
 }
 
 module.exports = async(deployer) => {

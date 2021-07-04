@@ -88,3 +88,4 @@ typings/
 .dynamodb/
 
 faucet.json
+build/

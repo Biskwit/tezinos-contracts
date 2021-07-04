@@ -1,4 +1,4 @@
-type blackJack_Game is record
+type game is record
   player : address;
   bet : nat;
   houseCards : map(nat, nat);
@@ -19,7 +19,8 @@ type state is record
   maxBet : nat;
   blackjack : nat;
   creator: address;
-  games : map(address, blackJack_Game);
+  games : map(address, game);
+  bannedUsers: set(address);
 end;
 
 type launchBJParams is record
@@ -41,14 +42,20 @@ type standParams is record
   result3 : nat;
 end;
 
+type banParams is record
+  player : address;
+end;
+
 type entryAction is
   | LaunchBJ of launchBJParams
   | Stand of standParams
   | Hit of hitParams
   | Bet of unit
   | Fund of unit
+  | BanUser of banParams
+  | UnBanUser of banParams
 
-const bj_Bet_0 : blackJack_Game = record [ 
+const bj_Bet_0 : game = record [ 
   player = ("tz1burnburnburnburnburnburnburjAYjjX" : address);
   bet = 0n;
   houseCards = map[0n->0n];
@@ -61,9 +68,26 @@ function cAssert(const p : bool; const s: string) : unit is
   block { if p then skip else failwith(s) }
   with unit
 
+function banUser (var self : state; const user : address) : state is
+  block {
+    cAssert(Tezos.sender = self.creator, "Tezos.sender = self.creator");
+    if not (self.bannedUsers contains user)
+        then self.bannedUsers := Set.add(user, self.bannedUsers);
+    else failwith ("user already banned");
+  } with self
+
+function unbanUser (var self : state; const user : address) : state is
+  block {
+    cAssert(Tezos.sender = self.creator, "Tezos.sender = self.creator");
+    if (self.bannedUsers contains user)
+        then self.bannedUsers := Set.remove(user, self.bannedUsers);
+    else failwith ("user already unbanned");
+  } with self
+
 function bet(var self : state) : (state) is block {
+    cAssert(self.bannedUsers contains Tezos.sender, "banned user");
     cAssert((Tezos.amount/1mutez) >= self.minBet, "Tezos.amount < self.minBet");
-    var _bj_game : blackJack_Game := (case self.games[Tezos.sender] of | None -> bj_Bet_0 | Some(x) -> x end);
+    var _bj_game : game := (case self.games[Tezos.sender] of | None -> bj_Bet_0 | Some(x) -> x end);
     cAssert(_bj_game.state =/= 0n, "_bj_game.state = 0n");
     self.games[Tezos.sender] := record [
         player=Tezos.sender;
@@ -132,14 +156,14 @@ function calculateScore (const cards : map(nat, nat)) : ((nat * nat)) is
 
 function checkGameResult(var self : state; const player : address; const finishGame : bool) : (list(operation) * state) is
   block {
-    var _bj_game : blackJack_Game := (case self.games[player] of | None -> bj_Bet_0 | Some(x) -> x end);
+    var _bj_game : game := (case self.games[player] of | None -> bj_Bet_0 | Some(x) -> x end);
     const tmp_0 : (nat * nat) = calculateScore(_bj_game.houseCards);
     const houseScore : nat = tmp_0.0;
     const houseScoreBig : nat = tmp_0.1;
     const tmp_1 : (nat * nat) = calculateScore(_bj_game.playerCards);
     const playerScore : nat = tmp_1.0;
     const playerScoreBig : nat = tmp_1.1;
-    var op0 : operation := transaction((unit), 1mutez, (get_contract(("tz1ZDcc6MGxidty2jivtWBjnuo1mcSXf4Mmr" : address)) : contract(unit)));
+    var op0 : operation := transaction((unit), 1mutez, (get_contract(("tz1burnburnburnburnburnburnburjAYjjX" : address)) : contract(unit)));
     _bj_game.playerScore := playerScore;
     if ((houseScoreBig = self.blackjack) or (houseScore = self.blackjack)) then block {
       if ((playerScore = self.blackjack) or (playerScoreBig = self.blackjack)) then block {
@@ -218,7 +242,7 @@ function checkGameResult(var self : state; const player : address; const finishG
 
 function launchBJ(var self : state; const player : address; const result1 : nat; const result2 : nat; const result3 : nat) : (list(operation) * state) is block {
     cAssert(Tezos.sender = self.creator, "Tezos.sender = self.creator");
-    var _bj_game : blackJack_Game := (case self.games[player] of | None -> bj_Bet_0 | Some(x) -> x end);
+    var _bj_game : game := (case self.games[player] of | None -> bj_Bet_0 | Some(x) -> x end);
     var houseCards : map(nat, nat) := map end;
     var playerCards : map(nat, nat) := map end;
     playerCards[0n] := result1;
@@ -240,7 +264,7 @@ function launchBJ(var self : state; const player : address; const result1 : nat;
 
 function hit (var self : state; const player : address; const result : nat) : (list(operation) * state) is
   block {
-    var _bj_game : blackJack_Game := (case self.games[player] of | None -> bj_Bet_0 | Some(x) -> x end);
+    var _bj_game : game := (case self.games[player] of | None -> bj_Bet_0 | Some(x) -> x end);
     cAssert(_bj_game.state = 0n, "_bj_game.state =/= 0n");
     const nextCard : nat = _bj_game.cardsDealt;
     _bj_game.playerCards[size(_bj_game.playerCards)] := result;
@@ -253,7 +277,7 @@ function hit (var self : state; const player : address; const result : nat) : (l
 
 function stand (var self : state; const player : address; const result : nat; const result2 : nat; const result3 : nat) : (list(operation) * state) is
   block {
-    var _bj_game : blackJack_Game := (case self.games[player] of | None -> bj_Bet_0 | Some(x) -> x end);
+    var _bj_game : game := (case self.games[player] of | None -> bj_Bet_0 | Some(x) -> x end);
     cAssert(_bj_game.state = 0n, "_bj_game.state =/= 0n");
     const tmp_0 : (nat * nat) = calculateScore(_bj_game.houseCards);
     var _houseScoreBig : nat := tmp_0.1;
@@ -300,4 +324,6 @@ function main (const action : entryAction; const self : state) : (list(operation
   | Hit(params) -> hit(self, params.player, params.result)
   | Bet -> ((nil : list(operation)), bet(self))
   | Fund -> ((nil : list(operation)), fund(self))
+  | BanUser(params) -> ((nil : list(operation)), banUser(self, params.player))
+  | UnBanUser(params) -> ((nil : list(operation)), unbanUser(self, params.player))
 end
