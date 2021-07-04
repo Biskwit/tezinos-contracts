@@ -59,7 +59,7 @@ function init (const self : state) : (state) is block {
 } with (self);
 
 function bet (const self : state; const num : nat) : (state) is block {
-    cAssert(self.bannedUsers contains Tezos.sender, "banned user");
+    cAssert(not(self.bannedUsers contains Tezos.sender), "banned user");
     cAssert(Tezos.amount >= self.minAmount, "Tezos.amount = self.minAmount");
     cAssert(((num > 0n) and (num <= 1000n)), "(number > 0n) and (number <= 1000n)");
     const better : player = record[addr=Tezos.sender;number=num];

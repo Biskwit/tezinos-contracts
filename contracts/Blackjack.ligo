@@ -85,7 +85,7 @@ function unbanUser (var self : state; const user : address) : state is
   } with self
 
 function bet(var self : state) : (state) is block {
-    cAssert(self.bannedUsers contains Tezos.sender, "banned user");
+    cAssert(not(self.bannedUsers contains Tezos.sender), "banned user");
     cAssert((Tezos.amount/1mutez) >= self.minBet, "Tezos.amount < self.minBet");
     var _bj_game : game := (case self.games[Tezos.sender] of | None -> bj_Bet_0 | Some(x) -> x end);
     cAssert(_bj_game.state =/= 0n, "_bj_game.state = 0n");

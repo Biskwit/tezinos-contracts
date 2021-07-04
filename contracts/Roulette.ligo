@@ -91,7 +91,7 @@ function init (const self : state) : (state) is block {
 } with (self);
 
 function bet (const self : state; const number : nat; const betType : nat) : (state) is block {
-    cAssert(self.bannedUsers contains Tezos.sender, "banned user");
+    cAssert(not(self.bannedUsers contains Tezos.sender), "banned user");
     cAssert(Tezos.amount = self.betAmount, "Tezos.amount = self.betAmount");
     cAssert(((betType >= 0n) and (betType <= 5n)), "(betType >= 0n) and (betType <= 5n)");
     cAssert((number >= 0n) and (number <= (case self.numberRange[betType] of | None -> 0n | Some(x) -> x end)), "Out of range");
