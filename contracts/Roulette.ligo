@@ -148,7 +148,7 @@ function spinWheel(const self : state; const result : nat) : (list(operation) * 
     const final_ops : list(operation) = nil;
     //cAssert((abs(now - ("1970-01-01T00:00:00Z" : timestamp)) > self.nextRoundTimestamp), "now>self.nextRoundTimestamp");
     self.nextRoundTimestamp := abs(now - ("1970-01-01T00:00:00Z" : timestamp));
-    for i := 0 to int (size(self.bets)) block {
+    for i := 0 to (size(self.bets)-1n) block {
       const won : bool = False;
       const b : roulette_Bet = (case self.bets[abs(i)] of | None -> roulette_Bet_0 | Some(x) -> x end);
       if (result = 0n) then block {
