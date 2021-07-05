@@ -92,7 +92,7 @@ function launchLoto(const self : state; const result : nat) : (list(operation) *
           | None -> (failwith ("Not a contract") : (contract(unit)))
           end;
         const op0 : operation = transaction(unit, (Tezos.balance/(Set.size(winners))), receiver);
-        const final_ops : list(operation) = op0 # ops;
+        final_ops := op0 # ops;
         ops := final_ops; 
       } else skip;
     };

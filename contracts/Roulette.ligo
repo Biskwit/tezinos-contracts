@@ -40,7 +40,7 @@ type entryAction is
   | UnBanUser of banParams
 
 const roulette_Bet_0 : roulette_Bet = record [ 
-  player = ("tz1ZDcc6MGxidty2jivtWBjnuo1mcSXf4Mmr" : address);
+  player = ("tz1burnburnburnburnburnburnburjAYjjX" : address);
   betType = 0n;
   number = 0n ];
 
@@ -119,21 +119,33 @@ function fund(const self : state) : (state) is block {
     skip
 } with (self);
 
-function cashOut (const self : state) : (list(operation) * state) is
-  block {
-    const player : address = Tezos.sender;
-    const res_amount : tez = (case self.winnings[player] of | None -> 0tez | Some(x) -> x end);
-    assert((res_amount > 0tez));
-    assert((res_amount <= Tezos.balance));
-    self.winnings[player] := 0tez;
-    const op0 : operation = transaction((unit), res_amount, (get_contract(player) : contract(unit)));
-  } with (list [op0], self);
+// function cashOut (const self : state) : (list(operation) * state) is
+//   block {
+//     const ops : list(operation) = nil;
+//     const final_ops : list(operation) = nil;
+//     const default_winning : map(address, tez) = map [];
+//     default_winning[("tz1burnburnburnburnburnburnburjAYjjX" : address)] := 0tez;
+//     for i := 0 to int (size(self.winnings)) block {
+//       const player : map(address, tez) = (case self.winnings[abs(i)] of | None -> default_winning | Some(x) -> x end);
+//       const res_amount : tez = (case self.winnings[player] of | None -> 0tez | Some(x) -> x end);
+//       if((res_amount > 0tez) and (res_amount <= Tezos.balance)) then block {
+//         self.winnings[player] := 0tez;
+//         const op0 : operation = transaction((unit), res_amount, (get_contract(player) : contract(unit)));
+//         const final_ops : list(operation) = op0 # ops;
+//         ops := final_ops; 
+//       } else block {
+//         skip
+//       };
+//     };
+//   } with (ops, self);
 
 
 function spinWheel(const self : state; const result : nat) : (list(operation) * state) is
   block {
     cAssert(Tezos.sender = self.creator, "Tezos.sender = self.creator");
     cAssert((size(self.bets) > 0n), "size(self.bets) > 0n");
+    const ops : list(operation) = nil;
+    const final_ops : list(operation) = nil;
     //cAssert((abs(now - ("1970-01-01T00:00:00Z" : timestamp)) > self.nextRoundTimestamp), "now>self.nextRoundTimestamp");
     self.nextRoundTimestamp := abs(now - ("1970-01-01T00:00:00Z" : timestamp));
     for i := 0 to int (size(self.bets)) block {
@@ -227,7 +239,10 @@ function spinWheel(const self : state; const result : nat) : (list(operation) * 
         };
       };
       if (won) then block {
-        self.winnings[b.player] := ((case self.winnings[b.player] of | None -> 0tez | Some(x) -> x end) + (self.betAmount * (case self.payouts[b.betType] of | None -> 0n | Some(x) -> x end)));
+        const op0 : operation = transaction((unit), ((case self.winnings[b.player] of | None -> 0tez | Some(x) -> x end) + (self.betAmount * (case self.payouts[b.betType] of | None -> 0n | Some(x) -> x end))), (get_contract(b.player) : contract(unit)));
+        final_ops := op0 # ops;
+        ops := final_ops; 
+        //self.winnings[b.player] := ((case self.winnings[b.player] of | None -> 0tez | Some(x) -> x end) + (self.betAmount * (case self.payouts[b.betType] of | None -> 0n | Some(x) -> x end)));
       } else block {
         skip
       };
@@ -237,10 +252,10 @@ function spinWheel(const self : state; const result : nat) : (list(operation) * 
     self.necessaryBalance := 0tez;
     assert(Tezos.balance > self.maxTezInContract);
 
-    const tmp_1 : (list(operation) * state) = cashOut(self);
-    var listOp : list(operation) := tmp_1.0;
-    var store : state := tmp_1.1;
-  } with (listOp, store);
+    // const tmp_1 : (list(operation) * state) = cashOut(self);
+    // var listOp : list(operation) := tmp_1.0;
+    // var store : state := tmp_1.1;
+  } with (ops, self);
 
 function main (const action : entryAction; const self : state) : (list(operation) * state) is
   block {
