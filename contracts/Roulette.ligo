@@ -34,8 +34,9 @@ end;
 type entryAction is
   | Initialize of unit
   | Fund of unit
-  | SpinWheel of spinWheelParams
+  | Unfund of unit
   | Bet of betParams
+  | SpinWheel of spinWheelParams
   | BanUser of banParams
   | UnBanUser of banParams
 
@@ -118,6 +119,16 @@ function takeProfits (const self : state) : (list(operation)) is block {
 function fund(const self : state) : (state) is block {
     skip
 } with (self);
+
+function unfund(const self : state) : (list(operation) * state) is block {
+  cAssert(Tezos.sender = self.creator, "Tezos.sender = self.creator");
+  const receiver : contract (unit) =
+        case (Tezos.get_contract_opt(self.creator): option(contract(unit))) of
+          Some (contract) -> contract
+        | None -> (failwith ("Not a contract") : (contract(unit)))
+        end;
+  const op0 : operation = transaction(unit, Tezos.balance, receiver);
+} with (list [op0], self);
 
 // function cashOut (const self : state) : (list(operation) * state) is
 //   block {
@@ -263,6 +274,7 @@ function main (const action : entryAction; const self : state) : (list(operation
   } with case action of
   | Initialize -> ((nil : list(operation)), init(self))
   | Fund -> ((nil : list(operation)), fund(self))
+  | Unfund -> unfund(self)
   | Bet(params) -> ((nil : list(operation)), bet(self, params.number, params.betType))
   | SpinWheel(params) -> spinWheel(self, params.result)
   | BanUser(params) -> ((nil : list(operation)), banUser(self, params.player))

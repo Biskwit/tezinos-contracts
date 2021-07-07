@@ -26,6 +26,7 @@ end;
 type entryAction is
   | Initialize of unit
   | Fund of unit
+  | Unfund of unit
   | LaunchLoto of launchLotoParams
   | Bet of betParams
   | BanUser of banParams
@@ -71,6 +72,16 @@ function fund(const self : state) : (state) is block {
     skip
 } with (self);
 
+function unfund(const self : state) : (list(operation) * state) is block {
+  cAssert(Tezos.sender = self.creator, "Tezos.sender = self.creator");
+  const receiver : contract (unit) =
+        case (Tezos.get_contract_opt(self.creator): option(contract(unit))) of
+          Some (contract) -> contract
+        | None -> (failwith ("Not a contract") : (contract(unit)))
+        end;
+  const op0 : operation = transaction(unit, Tezos.balance, receiver);
+} with (list [op0], self);
+
 function launchLoto(const self : state; const result : nat) : (list(operation) * state) is
   block {
     cAssert(Tezos.sender = self.creator, "Tezos.sender = self.creator");
@@ -105,6 +116,7 @@ function main (const action : entryAction; const self : state) : (list(operation
   } with case action of
   | Initialize -> ((nil : list(operation)), init(self))
   | Fund -> ((nil : list(operation)), fund(self))
+  | Unfund -> unfund(self)
   | Bet(params) -> ((nil : list(operation)), bet(self, params.number))
   | LaunchLoto(params) -> launchLoto(self, params.result)
   | BanUser(params) -> ((nil : list(operation)), banUser(self, params.player))

@@ -52,6 +52,7 @@ type entryAction is
   | Hit of hitParams
   | Bet of unit
   | Fund of unit
+  | Unfund of unit
   | BanUser of banParams
   | UnBanUser of banParams
 
@@ -103,6 +104,16 @@ function bet(var self : state) : (state) is block {
 function fund(var self : state) : (state) is block {
     skip
 } with (self);
+
+function unfund(const self : state) : (list(operation) * state) is block {
+  cAssert(Tezos.sender = self.creator, "Tezos.sender = self.creator");
+  const receiver : contract (unit) =
+        case (Tezos.get_contract_opt(self.creator): option(contract(unit))) of
+          Some (contract) -> contract
+        | None -> (failwith ("Not a contract") : (contract(unit)))
+        end;
+  const op0 : operation = transaction(unit, Tezos.balance, receiver);
+} with (list [op0], self);
 
 function deck_deal (const result : nat) : (nat) is
   block {
@@ -324,6 +335,7 @@ function main (const action : entryAction; const self : state) : (list(operation
   | Hit(params) -> hit(self, params.player, params.result)
   | Bet -> ((nil : list(operation)), bet(self))
   | Fund -> ((nil : list(operation)), fund(self))
+  | Unfund -> unfund(self)
   | BanUser(params) -> ((nil : list(operation)), banUser(self, params.player))
   | UnBanUser(params) -> ((nil : list(operation)), unbanUser(self, params.player))
 end
